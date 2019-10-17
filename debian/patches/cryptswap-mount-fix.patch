@@ -1,0 +1,20 @@
+Index: systemd-240/src/cryptsetup/cryptsetup-generator.c
+===================================================================
+--- systemd-240.orig/src/cryptsetup/cryptsetup-generator.c
++++ systemd-240/src/cryptsetup/cryptsetup-generator.c
+@@ -272,10 +272,14 @@ static int create_disk(
+                         "ExecStartPost=/sbin/mke2fs '/dev/mapper/%s'\n",
+                         name_escaped);
+ 
+-        if (swap)
++        if (swap) {
+                 fprintf(f,
+                         "ExecStartPost=/sbin/mkswap '/dev/mapper/%s'\n",
+                         name_escaped);
++                fprintf(f,
++                        "ExecStartPost=/bin/udevadm trigger '/dev/mapper/%s'\n",
++                        name_escaped);
++        }
+ 
+         if (keydev)
+                 fprintf(f,
