@@ -1,3 +1,9 @@
+systemd (242-7ubuntu3pop0) eoan; urgency=medium
+
+  * cryptswap-mount-fix.patch: fix delay when using encrypted swap
+
+ -- Jeremy Soller <jeremy@system76.com>  Thu, 17 Oct 2019 10:24:02 -0600
+
 systemd (242-7ubuntu3) eoan; urgency=medium
 
   * Fix using domain set by DHCP as search domain (LP: #1846509)
