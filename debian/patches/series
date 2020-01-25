@@ -46,3 +46,7 @@ network-Set-link-state-to-LINK_STATE_PENDING-instead-of-t.patch
 dhcp-Allow-setting-request-options-again.patch
 lp1861941-dont-generate-disk-byuuid-for-bcache-uuid.patch
 lp1895418.patch
+
+# Pop patches
+cryptswap-mount-fix.patch
+systemd-boot-id-compat.patch
