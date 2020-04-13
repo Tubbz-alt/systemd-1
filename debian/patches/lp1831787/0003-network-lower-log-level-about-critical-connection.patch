@@ -17,4 +17,4 @@ Subject: [PATCH] network: lower log level about critical connection
 +                                log_link_notice(link, "DHCPv4 connection considered system critical, ignoring request to reconfigure it.");
                                  return;
                          }
-
+ 

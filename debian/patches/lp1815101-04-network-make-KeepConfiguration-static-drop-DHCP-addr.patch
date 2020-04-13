@@ -20,7 +20,7 @@ index 01ef248d6..1a9539c5d 100644
 @@ -2921,6 +2921,33 @@ static bool link_is_static_route_configured(Link *link, Route *route) {
          return false;
  }
-
+ 
 +static bool link_address_is_dynamic(Link *link, Address *address) {
 +        Route *route;
 +        Iterator i;
@@ -54,7 +54,7 @@ index 01ef248d6..1a9539c5d 100644
 @@ -2932,6 +2959,12 @@ static int link_drop_foreign_config(Link *link) {
                  if (address->family == AF_INET6 && in_addr_is_link_local(AF_INET6, &address->in_addr) == 1)
                          continue;
-
+ 
 +                if (link_address_is_dynamic(link, address)) {
 +                        if (FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_DHCP))
 +                                continue;
@@ -67,7 +67,7 @@ index 01ef248d6..1a9539c5d 100644
 @@ -2948,6 +2981,14 @@ static int link_drop_foreign_config(Link *link) {
                  if (route->protocol == RTPROT_KERNEL)
                          continue;
-
+ 
 +                if (route->protocol == RTPROT_STATIC &&
 +                    FLAGS_SET(link->network->keep_configuration, KEEP_CONFIGURATION_STATIC))
 +                        continue;
@@ -88,6 +88,6 @@ index 01ef248d6..1a9539c5d 100644
                  r = link_drop_foreign_config(link);
                  if (r < 0)
                          return r;
---
+-- 
 2.20.1
 

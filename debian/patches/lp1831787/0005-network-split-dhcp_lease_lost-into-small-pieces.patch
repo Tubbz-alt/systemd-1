@@ -12,7 +12,7 @@ Subject: [PATCH] network: split dhcp_lease_lost() into small pieces
 @@ -181,131 +181,196 @@
          return 0;
  }
-
+ 
 -static int dhcp_lease_lost(Link *link) {
 -        struct in_addr address = {};
 -        int r;
@@ -20,17 +20,17 @@ Subject: [PATCH] network: split dhcp_lease_lost() into small pieces
 +        _cleanup_free_ sd_dhcp_route **routes = NULL;
 +        uint32_t table;
 +        int n, i, r;
-
+ 
          assert(link);
 -        assert(link->dhcp_lease);
 +        assert(address);
-
+ 
 -        log_link_warning(link, "DHCP lease lost");
 -
 -        link->dhcp4_configured = false;
 +        if (!link->network->dhcp_use_routes)
 +                return 0;
-
+ 
 -        (void) sd_dhcp_lease_get_address(link->dhcp_lease, &address);
 +        n = sd_dhcp_lease_get_routes(link->dhcp_lease, &routes);
 +        if (IN_SET(n, 0, -ENODATA)) {
@@ -55,7 +55,7 @@ Subject: [PATCH] network: split dhcp_lease_lost() into small pieces
 +                route->priority = link->network->dhcp_route_metric;
 +                route->table = table;
 +                route->scope = route_scope_from_address(route, address);
-
+ 
 -        if (link->network->dhcp_use_routes) {
 -                _cleanup_free_ sd_dhcp_route **routes = NULL;
 -                const struct in_addr *router;
@@ -117,12 +117,12 @@ Subject: [PATCH] network: split dhcp_lease_lost() into small pieces
 -                }
 +                (void) route_remove(route, link, NULL);
          }
-
+ 
 -        if (!in4_addr_is_null(&address)) {
 -                _cleanup_(address_freep) Address *a = NULL;
 +        return n;
 +}
-
+ 
 -                r = address_new(&a);
 -                if (r >= 0) {
 -                        struct in_addr netmask;
@@ -140,18 +140,18 @@ Subject: [PATCH] network: split dhcp_lease_lost() into small pieces
 +        const struct in_addr *router;
 +        uint32_t table;
 +        int r;
-
+ 
 -                        address_remove(a, link, NULL);
 -                }
 -        }
 +        assert(link);
 +        assert(address);
-
+ 
 -        if (link->network->dhcp_use_mtu) {
 -                uint16_t mtu;
 +        if (!link->network->dhcp_use_routes)
 +                return 0;
-
+ 
 -                r = sd_dhcp_lease_get_mtu(link->dhcp_lease, &mtu);
 -                if (r >= 0 && link->original_mtu != mtu) {
 -                        r = link_set_mtu(link, link->original_mtu, true);
@@ -172,7 +172,7 @@ Subject: [PATCH] network: split dhcp_lease_lost() into small pieces
 +                log_link_info(link, "DHCP: Received gateway is null, ignoring.");
 +                return 0;
          }
-
+ 
 -        if (link->network->dhcp_use_hostname) {
 -                const char *hostname = NULL;
 +        table = link_get_dhcp_route_table(link);
@@ -242,7 +242,7 @@ Subject: [PATCH] network: split dhcp_lease_lost() into small pieces
 +
 +        if (!link->network->dhcp_use_mtu)
 +                return 0;
-
+ 
 -                if (link->network->dhcp_hostname)
 -                        hostname = link->network->dhcp_hostname;
 -                else
@@ -267,7 +267,7 @@ Subject: [PATCH] network: split dhcp_lease_lost() into small pieces
 +                link_enter_failed(link);
 +                return r;
          }
-
+ 
 +        return 0;
 +}
 +
@@ -314,4 +314,4 @@ Subject: [PATCH] network: split dhcp_lease_lost() into small pieces
 +
          link->dhcp_lease = sd_dhcp_lease_unref(link->dhcp_lease);
          link_dirty(link);
-
+ 

@@ -35,13 +35,13 @@ index 4759fd6fd..7c7414ec0 100644
 +          <literal>dhcp-on-stop</literal>.</para>
 +        </listitem>
 +      </varlistentry>
-
+ 
        </variablelist>
-
+ 
 @@ -1337,17 +1353,6 @@
            system. Defaults to <literal>no</literal>.</para></listitem>
          </varlistentry>
-
+ 
 -        <varlistentry>
 -          <term><varname>CriticalConnection=</varname></term>
 -          <listitem>
@@ -56,6 +56,6 @@ index 4759fd6fd..7c7414ec0 100644
          <varlistentry>
            <term><varname>ClientIdentifier=</varname></term>
            <listitem>
---
+-- 
 2.20.1
 

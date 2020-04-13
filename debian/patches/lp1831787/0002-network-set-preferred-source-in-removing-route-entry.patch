@@ -13,7 +13,7 @@ Closes #12490.
 +++ b/src/network/networkd-dhcp4.c
 @@ -182,11 +182,7 @@
  }
-
+ 
  static int dhcp_lease_lost(Link *link) {
 -        _cleanup_(address_freep) Address *address = NULL;
 -        const struct in_addr *router;
@@ -22,12 +22,12 @@ Closes #12490.
 -        unsigned prefixlen = 0;
 +        struct in_addr address = {};
          int r;
-
+ 
          assert(link);
 @@ -194,10 +190,16 @@
-
+ 
          log_link_warning(link, "DHCP lease lost");
-
+ 
 +        (void) sd_dhcp_lease_get_address(link->dhcp_lease, &address);
 +
          if (link->network->dhcp_use_routes) {
@@ -35,7 +35,7 @@ Closes #12490.
 +                const struct in_addr *router;
 +                uint32_t table;
                  int n, i;
-
+ 
 +                table = link_get_dhcp_route_table(link);
 +
                  n = sd_dhcp_lease_get_routes(link->dhcp_lease, &routes);
@@ -48,18 +48,18 @@ Closes #12490.
 +                                        route->priority = link->network->dhcp_route_metric;
 +                                        route->table = table;
 +                                        route->scope = route_scope_from_address(route, &address);
-
+ 
                                          route_remove(route, link, NULL);
                                  }
 @@ -216,7 +221,7 @@
                  }
-
+ 
                  r = sd_dhcp_lease_get_router(link->dhcp_lease, &router);
 -                if (r > 0 && !in4_addr_is_null(&router[0])) {
 +                if (r > 0 && !in4_addr_is_null(&router[0]) && !in4_addr_is_null(&address)) {
                          _cleanup_(route_freep) Route *route_gw = NULL;
                          _cleanup_(route_freep) Route *route = NULL;
-
+ 
 @@ -225,7 +230,11 @@
                                  route_gw->family = AF_INET;
                                  route_gw->dst.in = router[0];
@@ -69,7 +69,7 @@ Closes #12490.
 +                                route_gw->protocol = RTPROT_DHCP;
 +                                route_gw->priority = link->network->dhcp_route_metric;
 +                                route_gw->table = table;
-
+ 
                                  route_remove(route_gw, link, NULL);
                          }
 @@ -234,25 +243,33 @@
@@ -80,12 +80,12 @@ Closes #12490.
 +                                route->protocol = RTPROT_DHCP;
 +                                route->priority = link->network->dhcp_route_metric;
 +                                route->table = table;
-
+ 
                                  route_remove(route, link, NULL);
                          }
                  }
          }
-
+ 
 -        r = address_new(&address);
 -        if (r >= 0) {
 -                r = sd_dhcp_lease_get_address(link->dhcp_lease, &addr);
@@ -100,16 +100,16 @@ Closes #12490.
                          r = sd_dhcp_lease_get_netmask(link->dhcp_lease, &netmask);
                          if (r >= 0)
                                  prefixlen = in4_addr_netmask_to_prefixlen(&netmask);
-
+ 
 -                        address->family = AF_INET;
 -                        address->in_addr.in = addr;
 -                        address->prefixlen = prefixlen;
 +                        a->family = AF_INET;
 +                        a->in_addr.in = address;
 +                        a->prefixlen = prefixlen;
-
+ 
 -                        address_remove(address, link, NULL);
 +                        address_remove(a, link, NULL);
                  }
          }
-
+ 

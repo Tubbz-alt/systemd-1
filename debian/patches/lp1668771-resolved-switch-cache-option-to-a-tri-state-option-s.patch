@@ -33,7 +33,7 @@ Signed-off-by: Jorge Niedbalski <jnr@metaklass.org>
 --- a/man/resolved.conf.xml
 +++ b/man/resolved.conf.xml
 @@ -224,10 +224,11 @@
-
+ 
        <varlistentry>
          <term><varname>Cache=</varname></term>
 -        <listitem><para>Takes a boolean argument. If <literal>yes</literal> (the default), resolving a domain name
@@ -42,13 +42,13 @@ Signed-off-by: Jorge Niedbalski <jnr@metaklass.org>
          not result in a new network request. Be aware that turning off caching comes at a performance penalty, which
          is particularly high when DNSSEC is used.</para>
 +        If <literal>no-negative</literal>, only positive answers are cached.
-
+ 
          <para>Note that caching is turned off implicitly if the configured DNS server is on a host-local IP address
          (such as 127.0.0.1 or ::1), in order to avoid duplicate local caching.</para></listitem>
 --- a/src/resolve/resolved-dns-cache.c
 +++ b/src/resolve/resolved-dns-cache.c
 @@ -619,6 +619,7 @@
-
+ 
  int dns_cache_put(
                  DnsCache *c,
 +                DnsCacheMode cache_mode,
@@ -58,7 +58,7 @@ Signed-off-by: Jorge Niedbalski <jnr@metaklass.org>
 @@ -726,6 +727,13 @@
                          return 0;
          }
-
+ 
 +        if (cache_mode == DNS_CACHE_MODE_NO_NEGATIVE) {
 +                char key_str[DNS_RESOURCE_KEY_STRING_MAX];
 +                log_debug("Not caching negative entry for: %s, cache mode set to no-negative",
@@ -77,31 +77,31 @@ Signed-off-by: Jorge Niedbalski <jnr@metaklass.org>
  #include "prioq.h"
 +#include "resolve-util.h"
  #include "time-util.h"
-
+ 
  typedef struct DnsCache {
 @@ -21,7 +22,7 @@
  void dns_cache_flush(DnsCache *c);
  void dns_cache_prune(DnsCache *c);
-
+ 
 -int dns_cache_put(DnsCache *c, DnsResourceKey *key, int rcode, DnsAnswer *answer, bool authenticated, uint32_t nsec_ttl, usec_t timestamp, int owner_family, const union in_addr_union *owner_address);
 +int dns_cache_put(DnsCache *c, DnsCacheMode cache_mode, DnsResourceKey *key, int rcode, DnsAnswer *answer, bool authenticated, uint32_t nsec_ttl, usec_t timestamp, int owner_family, const union in_addr_union *owner_address);
  int dns_cache_lookup(DnsCache *c, DnsResourceKey *key, bool clamp_ttl, int *rcode, DnsAnswer **answer, bool *authenticated);
-
+ 
  int dns_cache_check_conflicts(DnsCache *cache, DnsResourceRecord *rr, int owner_family, const union in_addr_union *owner_address);
 --- a/src/resolve/resolved-dns-transaction.c
 +++ b/src/resolve/resolved-dns-transaction.c
 @@ -674,7 +674,7 @@
                  return;
-
+ 
          /* Caching disabled? */
 -        if (!t->scope->manager->enable_cache)
 +        if (t->scope->manager->enable_cache == DNS_CACHE_MODE_NO)
                  return;
-
+ 
          /* We never cache if this packet is from the local host, under
 @@ -685,6 +685,7 @@
                  return;
-
+ 
          dns_cache_put(&t->scope->cache,
 +                      t->scope->manager->enable_cache,
                        t->key,
@@ -139,17 +139,17 @@ Signed-off-by: Jorge Niedbalski <jnr@metaklass.org>
 -        bool enable_cache;
 +        DnsCacheMode enable_cache;
          DnsStubListenerMode dns_stub_listener_mode;
-
+ 
          /* Network */
 --- a/src/resolve/resolved-mdns.c
 +++ b/src/resolve/resolved-mdns.c
 @@ -319,7 +319,7 @@
                                  dns_transaction_process_reply(t, p);
                  }
-
+ 
 -                dns_cache_put(&scope->cache, NULL, DNS_PACKET_RCODE(p), p->answer, false, (uint32_t) -1, 0, p->family, &p->sender);
 +                dns_cache_put(&scope->cache, scope->manager->enable_cache, NULL, DNS_PACKET_RCODE(p), p->answer, false, (uint32_t) -1, 0, p->family, &p->sender);
-
+ 
          } else if (dns_packet_validate_query(p) > 0)  {
                  log_debug("Got mDNS query packet for id %u", DNS_PACKET_ID(p));
 --- a/src/shared/resolve-util.c
@@ -174,7 +174,7 @@ Signed-off-by: Jorge Niedbalski <jnr@metaklass.org>
 @@ -4,6 +4,16 @@
  #include "conf-parser.h"
  #include "macro.h"
-
+ 
 +typedef enum DnsCacheMode DnsCacheMode;
 +
 +enum DnsCacheMode {
@@ -193,11 +193,11 @@ Signed-off-by: Jorge Niedbalski <jnr@metaklass.org>
  CONFIG_PARSER_PROTOTYPE(config_parse_dnssec_mode);
  CONFIG_PARSER_PROTOTYPE(config_parse_dns_over_tls_mode);
 +CONFIG_PARSER_PROTOTYPE(config_parse_dns_cache_mode);
-
+ 
  const char* resolve_support_to_string(ResolveSupport p) _const_;
  ResolveSupport resolve_support_from_string(const char *s) _pure_;
 @@ -58,3 +69,6 @@
-
+ 
  const char* dns_over_tls_mode_to_string(DnsOverTlsMode p) _const_;
  DnsOverTlsMode dns_over_tls_mode_from_string(const char *s) _pure_;
 +

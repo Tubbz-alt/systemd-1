@@ -22,7 +22,7 @@ Closes https://github.com/systemd/systemd/issues/12426
                          }
                  }
 -        }
-
+ 
 -        r = address_new(&address);
 -        if (r >= 0) {
                  r = sd_dhcp_lease_get_router(link->dhcp_lease, &router);
@@ -33,16 +33,16 @@ Closes https://github.com/systemd/systemd/issues/12426
                          }
                  }
 +        }
-
+ 
 +        r = address_new(&address);
 +        if (r >= 0) {
                  r = sd_dhcp_lease_get_address(link->dhcp_lease, &addr);
                  if (r >= 0) {
                          r = sd_dhcp_lease_get_netmask(link->dhcp_lease, &netmask);
 @@ -308,6 +308,9 @@
-
+ 
          link_set_dhcp_routes(link);
-
+ 
 +        /* Add back static routes since kernel removes while DHCPv4 address is removed from when lease expires */
 +        link_request_set_routes(link);
 +
@@ -54,7 +54,7 @@ Closes https://github.com/systemd/systemd/issues/12426
 @@ -954,7 +954,7 @@
          return 1;
  }
-
+ 
 -static int link_request_set_routes(Link *link) {
 +int link_request_set_routes(Link *link) {
          enum {
@@ -67,6 +67,6 @@ Closes https://github.com/systemd/systemd/issues/12426
  uint32_t link_get_dhcp_route_table(Link *link);
  uint32_t link_get_ipv6_accept_ra_route_table(Link *link);
 +int link_request_set_routes(Link *link);
-
+ 
  int link_sysctl_ipv6_enabled(Link *link);
-
+ 

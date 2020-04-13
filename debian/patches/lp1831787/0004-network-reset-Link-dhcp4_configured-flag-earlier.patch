@@ -10,19 +10,19 @@ Subject: [PATCH] network: reset Link::dhcp4_configured flag earlier
 --- a/src/network/networkd-dhcp4.c
 +++ b/src/network/networkd-dhcp4.c
 @@ -190,6 +190,8 @@
-
+ 
          log_link_warning(link, "DHCP lease lost");
-
+ 
 +        link->dhcp4_configured = false;
 +
          (void) sd_dhcp_lease_get_address(link->dhcp_lease, &address);
-
+ 
          if (link->network->dhcp_use_routes) {
 @@ -306,7 +308,6 @@
-
+ 
          link->dhcp_lease = sd_dhcp_lease_unref(link->dhcp_lease);
          link_dirty(link);
 -        link->dhcp4_configured = false;
-
+ 
          return 0;
  }

@@ -38,7 +38,7 @@ Fixes: #12969
                  route->scope = route_scope_from_address(route, &address);
 +                if (IN_SET(route->scope, RT_SCOPE_LINK, RT_SCOPE_UNIVERSE))
 +                        route->prefsrc.in = address;
-
+ 
                  r = route_configure(route, link, dhcp4_route_handler);
                  if (r < 0)
 @@ -215,6 +217,8 @@
@@ -47,6 +47,6 @@ Fixes: #12969
                  route->scope = route_scope_from_address(route, address);
 +                if (IN_SET(route->scope, RT_SCOPE_LINK, RT_SCOPE_UNIVERSE))
 +                        route->prefsrc.in = *address;
-
+ 
                  (void) route_remove(route, link, NULL);
          }
