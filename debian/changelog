@@ -1,3 +1,9 @@
+systemd (245.4-4ubuntu3.3pop0) focal; urgency=medium
+
+  * Pop!_OS patches
+
+ -- Jeremy Soller <jeremy@system76.com>  Wed, 11 Nov 2020 12:49:40 -0700
+
 systemd (245.4-4ubuntu3.3) focal; urgency=medium
 
   [ Rafael David Tinoco ]
